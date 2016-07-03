@@ -29,6 +29,8 @@ namespace VRTK
         public event ObjectInteractEventHandler ControllerUntouchInteractableObject;
 
         private GameObject touchedObject = null;
+        private GameObject lastTouchedObject = null;
+
         private SteamVR_TrackedObject trackedController;
         private VRTK_ControllerActions controllerActions;
         private GameObject controllerRigidBody;
@@ -83,6 +85,14 @@ namespace VRTK
             }
         }
 
+        public void ForceStopTouching()
+        {
+            if (touchedObject != null)
+            {
+                StopTouching(touchedObject);
+            }
+        }
+
         private void Awake()
         {
             trackedController = GetComponent<SteamVR_TrackedObject>();
@@ -103,11 +113,19 @@ namespace VRTK
 
         private void OnTriggerEnter(Collider collider)
         {
-            OnTriggerStay(collider);
+            if(IsObjectInteractable(collider.gameObject) && (touchedObject == null || !touchedObject.GetComponent<VRTK_InteractableObject>().IsGrabbed()))
+            {
+                lastTouchedObject = collider.gameObject;
+            }
         }
 
         private void OnTriggerStay(Collider collider)
         {
+            if(touchedObject != null && touchedObject != lastTouchedObject && !touchedObject.GetComponent<VRTK_InteractableObject>().IsGrabbed())
+            {
+                ForceStopTouching();
+            }
+
             if (touchedObject == null && IsObjectInteractable(collider.gameObject))
             {
                 if (collider.gameObject.GetComponent<VRTK_InteractableObject>())
@@ -155,31 +173,36 @@ namespace VRTK
 
         private void OnTriggerExit(Collider collider)
         {
-            if(touchedObject != null && (touchedObject == collider.gameObject || IsColliderChildOfTouchedObject(collider.gameObject)))
+            if (touchedObject != null && (touchedObject == collider.gameObject || IsColliderChildOfTouchedObject(collider.gameObject)))
             {
-                if (IsObjectInteractable(collider.gameObject))
-                {
-                    GameObject untouched;
-                    if (collider.gameObject.GetComponent<VRTK_InteractableObject>())
-                    {
-                        untouched = collider.gameObject;
-                    }
-                    else
-                    {
-                        untouched = collider.gameObject.GetComponentInParent<VRTK_InteractableObject>().gameObject;
-                    }
-
-                    OnControllerUntouchInteractableObject(SetControllerInteractEvent(untouched.gameObject));
-                    untouched.GetComponent<VRTK_InteractableObject>().ToggleHighlight(false);
-                    untouched.GetComponent<VRTK_InteractableObject>().StopTouching(this.gameObject);
-                }
-
-                if (hideControllerOnTouch)
-                {
-                    controllerActions.ToggleControllerModel(true, touchedObject);
-                }
-                touchedObject = null;
+                StopTouching(collider.gameObject);
             }
+        }
+
+        private void StopTouching(GameObject obj)
+        {
+            if (IsObjectInteractable(obj))
+            {
+                GameObject untouched;
+                if (obj.GetComponent<VRTK_InteractableObject>())
+                {
+                    untouched = obj;
+                }
+                else
+                {
+                    untouched = obj.GetComponentInParent<VRTK_InteractableObject>().gameObject;
+                }
+
+                OnControllerUntouchInteractableObject(SetControllerInteractEvent(untouched.gameObject));
+                untouched.GetComponent<VRTK_InteractableObject>().ToggleHighlight(false);
+                untouched.GetComponent<VRTK_InteractableObject>().StopTouching(this.gameObject);
+            }
+
+            if (hideControllerOnTouch)
+            {
+                controllerActions.ToggleControllerModel(true, touchedObject);
+            }
+            touchedObject = null;
         }
 
         private void CreateTouchCollider(GameObject obj)
