@@ -90,7 +90,7 @@ namespace VRTK
             controllerActions = GetComponent<VRTK_ControllerActions>();
         }
 
-        private void Start()
+        private void OnEnable()
         {
             if (GetComponent<VRTK_ControllerEvents>() == null)
             {
@@ -102,6 +102,13 @@ namespace VRTK
             GetComponent<VRTK_ControllerEvents>().AliasGrabOff += new ControllerInteractionEventHandler(DoReleaseObject);
 
             SetControllerAttachPoint();
+        }
+
+        private void OnDisable()
+        {
+            ForceRelease();
+            GetComponent<VRTK_ControllerEvents>().AliasGrabOn -= new ControllerInteractionEventHandler(DoGrabObject);
+            GetComponent<VRTK_ControllerEvents>().AliasGrabOff -= new ControllerInteractionEventHandler(DoReleaseObject);
         }
 
         private void SetControllerAttachPoint()
@@ -173,7 +180,7 @@ namespace VRTK
                 var snapHandle = GetSnapHandle(objectScript);
                 objectScript.SetGrabbedSnapHandle(snapHandle);
 
-                obj.transform.rotation = transform.rotation * Quaternion.Euler(snapHandle.transform.localEulerAngles);
+                obj.transform.rotation = controllerAttachPoint.transform.rotation * Quaternion.Euler(snapHandle.transform.localEulerAngles);
                 obj.transform.position = controllerAttachPoint.transform.position - (snapHandle.transform.position - obj.transform.position);
             }
         }
@@ -189,7 +196,7 @@ namespace VRTK
 
             if (objectScript.grabAttachMechanic == VRTK_InteractableObject.GrabAttachType.Child_Of_Controller)
             {
-                obj.transform.parent = transform;
+                obj.transform.parent = controllerAttachPoint.transform;
             }
             else
             {
